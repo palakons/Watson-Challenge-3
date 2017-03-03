@@ -18,7 +18,7 @@ app.set('port', config.PORT);
 
 //respond with "hello world" when a GET request is made to the homepage
 app.get('/', function (req, res) {
-  res.send('hello not so big world')
+  res.send('hello not so big world, lol')
 });
 
 app.use(cors());
