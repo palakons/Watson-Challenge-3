@@ -16,6 +16,11 @@ import logger from './common/logger';
 const app = express();
 app.set('port', config.PORT);
 
+//respond with "hello world" when a GET request is made to the homepage
+app.get('/', function (req, res) {
+  res.send('hello not so big world')
+});
+
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
