@@ -5,3 +5,7 @@ applications:
   name: sky-bluemix-starter-2
   host: tc-nizzz-02translate
   disk_quota: 1024M
+declared-services:
+  language-translator-service:
+    label: language_translator
+    plan: standard

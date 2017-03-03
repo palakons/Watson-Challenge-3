@@ -18,8 +18,68 @@ app.set('port', config.PORT);
 
 //respond with "hello world" when a GET request is made to the homepage
 app.get('/', function (req, res) {
-  res.send('hello not so big world, lol')
+  res.send('hello not so big world, lol<br/><pre>');//+JSON.stringify(req)+'</pre>');
 });
+
+//========================================================================
+
+var LanguageTranslatorV2 = require('watson-developer-cloud/language-translator/v2');
+console.log(JSON.stringify(LanguageTranslatorV2));
+var translator = new LanguageTranslatorV2({
+  // If unspecified here, the LANGUAGE_TRANSLATOR_USERNAME and LANGUAGE_TRANSLATOR_PASSWORD environment properties will be checked
+  // After that, the SDK will fall back to the bluemix-provided VCAP_SERVICES environment property
+  // username: '<username>',
+  // password: '<password>'
+  url: 'https://gateway.watsonplatform.net/language-translator/api'
+});
+
+app.get('/api/models', function(req, res, next) {
+  console.log('/v2/models');
+  translator.getModels({}, function(err, models) {
+    if (err)
+      return next(err);
+    else
+      res.json(models);
+  });
+});
+
+
+app.post('/api/identify', function(req, res, next) {
+  console.log('/v2/identify');
+  var params = {
+    text: req.body.textData,
+    'X-WDC-PL-OPT-OUT': req.header('X-WDC-PL-OPT-OUT')
+  };
+  translator.identify(params, function(err, models) {
+    if (err)
+      return next(err);
+    else
+        res.json(models);
+  });
+});
+
+app.get('/api/identifiable_languages', function(req, res, next) {
+  console.log('/v2/identifiable_languages');
+  translator.getIdentifiableLanguages({}, function(err, models) {
+    if (err)
+      return next(err);
+    else
+      res.json(models);
+  });
+});
+
+app.post('/api/translate',  function(req, res, next) {
+  console.log('/v2/translate');
+  var params = extend({ 'X-WDC-PL-OPT-OUT': req.header('X-WDC-PL-OPT-OUT')}, req.body);
+  translator.translate(params, function(err, models) {
+    if (err)
+      return next(err);
+    else
+      res.json(models);
+  });
+});
+
+//========================================================================
 
 app.use(cors());
 app.use(bodyParser.json());
