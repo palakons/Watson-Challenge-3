@@ -32,7 +32,8 @@ var translator = new LanguageTranslatorV2({
   // After that, the SDK will fall back to the bluemix-provided VCAP_SERVICES environment property
   // username: '<username>',
   // password: '<password>'
-  url: 'https://gateway.watsonplatform.net/language-translator/api'
+  url: 'https://gateway.watsonplatform.net/language-translator/api'/*,
+  use_unauthenticated: process.env.use_unauthenticated === 'true'*/
 });
 
 
@@ -41,43 +42,28 @@ var translator = new LanguageTranslatorV2({
 - /api/translate
 - /api/history
 */
-app.post('/api/identify', function(req, res, next) {
-  console.log('/v2/identify');
-  var params = {
-    text: req.body.textData,
-    'X-WDC-PL-OPT-OUT': req.header('X-WDC-PL-OPT-OUT')
-  };
-  translator.identify(params, function(err, models) {
-    if (err)
-      return next(err);
-    else
-        res.json(models);
-  });
-});
 
 app.get('/api/translate',  function(req, res, next) {
   console.log('/v2/translate');
-  
- /* request.post(
-    'http://www.yoursite.com/formpage',
-    { json: { key: 'value' } },
-    function (error, response, body) {
-        if (!error && response.statusCode == 200) {
-            console.log(body)
-        }
-    }
-);*/
-  
-  var textSource = {'source':'en', 'target':'es','text':'hello'};
 
+  var textSource = {'source':req.query.sourceLanguageCode, 'target':req.query.destinationLanguageCode,'text':req.query.sourceText};
+  //res.json(req.query);
+
+  //check if inputs are non-empty
+  //check if language code exists
+  //check if language pair is OK
+  
   var params = extend({ 'X-WDC-PL-OPT-OUT': req.header('X-WDC-PL-OPT-OUT')}, textSource);
   translator.translate(params, function(err, models) {
     if (err)
       return next(err);
-    else
+    else {
       res.json(models);
+      //push into DB
+    }
   });
 });
+
 app.get('/api/history',  function(req, res, next) {
 	  console.log('/v2/history');
 	  res.send('history<br/><pre>'+'</pre>');

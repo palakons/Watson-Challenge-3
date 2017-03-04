@@ -1,27 +1,98 @@
 swagger: '2.0'
-
 info:
-  version: "0.0.1"
-  title: Blue mix starter
-
-basePath: /api
+  title: IBM Cognitive Fun Challenge Translate API
+  description: |
+    This is the REST API for IBM Cognitive Translate Challenge.
+  version: "1.0.0"
+# the domain of the service
+host: bluemix.net
+# array of all schemes that your API supports
 schemes:
-  - http
-consumes:
-- application/json
+  - https
+# will be prefixed to all paths
+basePath: /api/v1
 produces:
-- application/json
-
+  - application/json
 paths:
-  /test:
+  /translate:
     get:
-      description: Test method
-
+      summary: Translate a String
+      description: This method will translate a string into another language and calculate the tone of the translation
+      parameters:
+        - name: sourceText
+          in: query
+          description: Input String to translate.
+          required: true
+          type: string
+        - name: sourceLanguageCode
+          in: query
+          description: Source Language to Translate From.
+          required: true
+          type: string
+        - name: destinationLanguageCode
+          in: query
+          description: Target Language to Translate To.
+          required: true
+          type: string
       responses:
         200:
-          description: successful operation
+          description: Completed Translation Object
           schema:
-            type: object
-            properties:
-              success:
-                type: boolean
+            $ref: '#/definitions/Translation'
+        400:
+          description: The input is not valid
+          schema:
+            $ref: '#/definitions/Error'
+        default:
+          description: Unexpected error
+          schema:
+            $ref: '#/definitions/Error'
+  /history:
+    get:
+      summary: Get History from DB
+      description: Get translation history from the database.  Should return n entries sorted by date descending (most recent, first)
+      parameters:
+        - name: num
+          in: query
+          default: 5
+          description: Number of Translations to return
+          required: false
+          type: integer
+      responses:
+        200:
+         description: Return array of translation
+         schema:
+           type: array
+           items:
+             $ref: '#/definitions/Translation'
+definitions:
+  Translation:
+    properties:
+      sourceText:
+        type: string
+        description: Input String to Translate
+      sourceLanguageCode:
+        type: string
+        description: Language to Translate From
+      destinationLanguageCode:
+        type: string
+        description: Target Language to Translate To
+      sourceTextTone:
+        type:  string
+        format: json
+        description: Tone Object returned by Watson
+      translatedText:
+        type:  string
+        description: Text Translation by Watson
+      translatedTextTone:
+        type:  string
+        format: json
+        description: Tone Object returned by Watson
+  Error:
+    properties:
+      code:
+        type: string
+        description: The error code that refers the error type.
+      message:
+        type: string
+        description: The error message.
