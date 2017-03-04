@@ -12,13 +12,15 @@ import './bootstrap';
 import routes from './routes';
 import loadRoutes from './common/loadRoutes';
 import logger from './common/logger';
+import extend from 'extend';
+var request = require('request');
 
 const app = express();
 app.set('port', config.PORT);
 
 //respond with "hello world" when a GET request is made to the homepage
 app.get('/', function (req, res) {
-  res.send('hello not so big world, lol<br/><pre>');//+JSON.stringify(req)+'</pre>');
+  res.send('hello not so big world, lol<br/><pre>'+'</pre>');
 });
 
 //========================================================================
@@ -55,7 +57,20 @@ app.post('/api/identify', function(req, res, next) {
 
 app.get('/api/translate',  function(req, res, next) {
   console.log('/v2/translate');
-  var params = extend({ 'X-WDC-PL-OPT-OUT': req.header('X-WDC-PL-OPT-OUT')}, req.body);
+  
+ /* request.post(
+    'http://www.yoursite.com/formpage',
+    { json: { key: 'value' } },
+    function (error, response, body) {
+        if (!error && response.statusCode == 200) {
+            console.log(body)
+        }
+    }
+);*/
+  
+  var textSource = {'source':'en', 'target':'es','text':'hello'};
+
+  var params = extend({ 'X-WDC-PL-OPT-OUT': req.header('X-WDC-PL-OPT-OUT')}, textSource);
   translator.translate(params, function(err, models) {
     if (err)
       return next(err);
@@ -65,6 +80,7 @@ app.get('/api/translate',  function(req, res, next) {
 });
 app.get('/api/history',  function(req, res, next) {
 	  console.log('/v2/history');
+	  res.send('history<br/><pre>'+'</pre>');
 });
 
 /*
