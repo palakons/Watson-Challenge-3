@@ -33,17 +33,12 @@ var translator = new LanguageTranslatorV2({
   url: 'https://gateway.watsonplatform.net/language-translator/api'
 });
 
-app.get('/api/models', function(req, res, next) {
-  console.log('/v2/models');
-  translator.getModels({}, function(err, models) {
-    if (err)
-      return next(err);
-    else
-      res.json(models);
-  });
-});
 
-
+/*
+3. Create a GET API request with 2 endpoints
+- /api/translate
+- /api/history
+*/
 app.post('/api/identify', function(req, res, next) {
   console.log('/v2/identify');
   var params = {
@@ -58,17 +53,7 @@ app.post('/api/identify', function(req, res, next) {
   });
 });
 
-app.get('/api/identifiable_languages', function(req, res, next) {
-  console.log('/v2/identifiable_languages');
-  translator.getIdentifiableLanguages({}, function(err, models) {
-    if (err)
-      return next(err);
-    else
-      res.json(models);
-  });
-});
-
-app.post('/api/translate',  function(req, res, next) {
+app.get('/api/translate',  function(req, res, next) {
   console.log('/v2/translate');
   var params = extend({ 'X-WDC-PL-OPT-OUT': req.header('X-WDC-PL-OPT-OUT')}, req.body);
   translator.translate(params, function(err, models) {
@@ -78,6 +63,21 @@ app.post('/api/translate',  function(req, res, next) {
       res.json(models);
   });
 });
+app.get('/api/history',  function(req, res, next) {
+	  console.log('/v2/history');
+});
+
+/*
+4. Implement the API defined in the attached Swagger doc.  You may use editor.swagger.io generators if you wish.  
+You also do not have to follow the API to the letter.  
+As long as the inputs and outputs work as required, you are welcome to make additions or corrections as you see fit.
+*/
+
+/*
+5. Create a very simple UI that uses the above Api. A sample UI screenshot are provided below. 
+UI is provided for demonstration only, and not necessarily to implement as is. Feel free to experiment with the UI.  
+You will not be critiqued on the design of your UI, only the functionality surfaced in it.
+*/
 
 //========================================================================
 
