@@ -23,6 +23,29 @@ app.get('/', function (req, res) {
   res.send('hello not so big world, lol<br/><pre>'+'</pre>');
 });
 
+function makeTranslation(sourceText,sourceLanguageCode,destinationLanguageCode,sourceTextTone,translatedText,translatedTextTone){
+	return { 'Translation':{
+			'properties': {
+	    		'sourceText':	sourceText
+	    		,'sourceLanguageCode':	sourceLanguageCode
+	    		,'destinationLanguageCode':	destinationLanguageCode
+	    		,'sourceTextTone':	sourceTextTone
+	    		,'translatedText':	translatedText
+	    		,'translatedTextTone':	translatedTextTone
+	    	}	
+	    } 
+	};
+}
+function makeError(code,message){
+	return { 'Error':{
+			'properties': {
+	    		'code':	code
+	    		,'message':	message
+	    	}	
+	    } 
+	};
+}
+
 //========================================================================
 
 var LanguageTranslatorV2 = require('watson-developer-cloud/language-translator/v2');
@@ -58,7 +81,7 @@ app.get('/api/translate',  function(req, res, next) {
     if (err)
       return next(err);
     else {
-      res.json(models);
+      res.status(200).json(makeTranslation(textSource.text,textSource.source,textSource.target,'SourceTone',models.translations[0].translation,'TargetTone'));
       //push into DB
     }
   });
