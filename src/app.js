@@ -49,7 +49,6 @@ function makeError(code,message){
 //========================================================================
 
 var LanguageTranslatorV2 = require('watson-developer-cloud/language-translator/v2');
-console.log(JSON.stringify(LanguageTranslatorV2));
 var translator = new LanguageTranslatorV2({
   // If unspecified here, the LANGUAGE_TRANSLATOR_USERNAME and LANGUAGE_TRANSLATOR_PASSWORD environment properties will be checked
   // After that, the SDK will fall back to the bluemix-provided VCAP_SERVICES environment property
@@ -57,6 +56,15 @@ var translator = new LanguageTranslatorV2({
   // password: '<password>'
   url: 'https://gateway.watsonplatform.net/language-translator/api'/*,
   use_unauthenticated: process.env.use_unauthenticated === 'true'*/
+});
+
+var ToneAnalyzerV3 = require('watson-developer-cloud/tone-analyzer/v3');
+var toneAnalyzer = new ToneAnalyzerV3({
+  // If unspecified here, the TONE_ANALYZER_USERNAME and TONE_ANALYZER_PASSWORD environment properties will be checked
+  // After that, the SDK will fall back to the bluemix-provided VCAP_SERVICES environment property
+  // username: '<username>',
+  // password: '<password>',
+  version_date: '2016-05-19'
 });
 
 
@@ -71,12 +79,16 @@ app.get('/api/translate',  function(req, res, next) {
 
   var textSource = {'source':req.query.sourceLanguageCode, 'target':req.query.destinationLanguageCode,'text':req.query.sourceText};
 
+  console.log(JSON.stringify(req.query));
   //check if inputs are defined
-  if(req.query.sourceLanguageCode != null && req.query.destinationLanguageCode != null && req.query.sourceText != null)
-	  res.status(400).json(makeError('400','sourceLanguageCode, destinationLanguageCode and sourceText must be defined.'));
+  /*if(req.query.sourceLanguageCode  && req.query.destinationLanguageCode  && req.query.sourceText )
+	  res.status(400).json(makeError('400','sourceLanguageCode, destinationLanguageCode and sourceText must be defined.'));*/
+  
+  
   //check if inputs are non-empty
-  if(req.query.sourceLanguageCode === '' || req.query.destinationLanguageCode === '' || req.query.sourceText === '')
+  if(req.query.sourceLanguageCode == '' || req.query.destinationLanguageCode == '' || req.query.sourceText == '')
 	  res.status(400).json(makeError('400','sourceLanguageCode, destinationLanguageCode and sourceText must be non-empty.'));
+  
   //check if language code exists
   translator.getIdentifiableLanguages(null,
 		  function(err, languages) {
@@ -85,12 +97,14 @@ app.get('/api/translate',  function(req, res, next) {
 	    else {
 		      var sourceLanguageCodeOK = false;
 		      var targetLanguageCodeOK = false;
-		      for (lang in languages) { 
-			        if(lang.language === textSource.source)
+		      for (var lang in languages) { 
+			        if(lang.language == textSource.source) {
 			        	sourceLanguageCodeOK = true;
+			        	console.log('checking.....'+lang.language);
+			        }
 			      }
-		      for (lang in languages) { 
-			        if(lang.language === textSource.target)
+		      for (var lang in languages) { 
+			        if(lang.language == textSource.target)
 			        	targetLanguageCodeOK = true;
 			      }
 		      if(!sourceLanguageCodeOK || !targetLanguageCodeOK)
@@ -102,7 +116,7 @@ app.get('/api/translate',  function(req, res, next) {
     if (err)
       console.log(err)
     else {
-      if(models.models.length === 0){
+      if(models.models.length == 0){
       	  res.status(400).json(makeError('400','Invalid sourceLanguageCode / destinationLanguageCode combination.'));
       }
     }
@@ -113,8 +127,46 @@ app.get('/api/translate',  function(req, res, next) {
     if (err)
       return next(err);
     else {
-      res.status(200).json(makeTranslation(textSource.text,textSource.source,textSource.target,'SourceTone',models.translations[0].translation,'TargetTone'));
-      //push into DB
+
+ 	   var sourceTone = '';
+	   var targetTone = '';
+	    //call tone analyzer to source text
+    	toneAnalyzer.tone({ text: textSource.text },
+    	  function(err, tone) {
+    	    if (err)
+    	      console.log(err);
+    	    else{
+    	      //console.log(JSON.stringify(tone, null, 2));
+    	    	  console.log('tone');
+      	    	  console.log(JSON.stringify(tone));
+    	      for(var category in tone.document_tone.tone_categories){
+    	    	  console.log(typeof(category.tones));
+    	    	  console.log(JSON.stringify(category.tones));
+    	    	  category.tones.sort(function(a, b){
+    	    		    return a.score-b.score;
+    	    		});
+    	    	  sourceTone += tones[0].tone_name+ ', ';
+    	      }
+    	      //call tone analyzer to translated text
+    	      toneAnalyzer.tone({ text: models.translations[0].translation },
+	        	  function(err, tone) {
+	        	    if (err)
+	        	      console.log(err);
+	        	    else{
+	        	      //console.log(JSON.stringify(tone, null, 2));
+	        	      for(var category in tone.document_tone.tone_categories){
+	        	    	  category.tones.sort(function(a, b){
+	        	    		    return a.score-b.score;
+	        	    		});
+	        	    	  targetTone += tones[0].tone_name+ ', ';
+	        	      }
+	        	      //now we have all data
+	        	      //push into DB
+	        	      res.status(200).json(makeTranslation(textSource.text,textSource.source,textSource.target,sourceTone,models.translations[0].translation,targetTone));
+	        	    }
+	        	});
+    	    }
+    	});
     }
   });
 });
