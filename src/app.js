@@ -70,11 +70,43 @@ app.get('/api/translate',  function(req, res, next) {
   console.log('/v2/translate');
 
   var textSource = {'source':req.query.sourceLanguageCode, 'target':req.query.destinationLanguageCode,'text':req.query.sourceText};
-  //res.json(req.query);
 
+  //check if inputs are defined
+  if(req.query.sourceLanguageCode != null && req.query.destinationLanguageCode != null && req.query.sourceText != null)
+	  res.status(400).json(makeError('400','sourceLanguageCode, destinationLanguageCode and sourceText must be defined.'));
   //check if inputs are non-empty
+  if(req.query.sourceLanguageCode === '' || req.query.destinationLanguageCode === '' || req.query.sourceText === '')
+	  res.status(400).json(makeError('400','sourceLanguageCode, destinationLanguageCode and sourceText must be non-empty.'));
   //check if language code exists
+  translator.getIdentifiableLanguages(null,
+		  function(err, languages) {
+	    if (err)
+	      console.log(err)
+	    else {
+		      var sourceLanguageCodeOK = false;
+		      var targetLanguageCodeOK = false;
+		      for (lang in languages) { 
+			        if(lang.language === textSource.source)
+			        	sourceLanguageCodeOK = true;
+			      }
+		      for (lang in languages) { 
+			        if(lang.language === textSource.target)
+			        	targetLanguageCodeOK = true;
+			      }
+		      if(!sourceLanguageCodeOK || !targetLanguageCodeOK)
+		    	  res.status(400).json(makeError('400','Invalid sourceLanguageCode or destinationLanguageCode and sourceText must be non-empty.'));
+	    }
+	});
   //check if language pair is OK
+  translator.getModels({'source':textSource.source,'target':textSource.target}, function(err, models) {
+    if (err)
+      console.log(err)
+    else {
+      if(models.models.length === 0){
+      	  res.status(400).json(makeError('400','Invalid sourceLanguageCode / destinationLanguageCode combination.'));
+      }
+    }
+});
   
   var params = extend({ 'X-WDC-PL-OPT-OUT': req.header('X-WDC-PL-OPT-OUT')}, textSource);
   translator.translate(params, function(err, models) {
