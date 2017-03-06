@@ -23,8 +23,10 @@ app.set('port', config.PORT);
 
 // respond with "hello world" when a GET request is made to the homepage
 app.get('/', function (req, res) {
-	res.send('hello not so big world, lol<br/><pre>' + '</pre>');
-});
+	  res.render('index',
+	  { title : 'Home' }
+	  )
+	});
 
 
 // FUNCTIONS ================================================
