@@ -46,7 +46,7 @@ app.get('/', function (req, res) {
         if (err)
             console.log(err)
         else {
-        	var params = extend({ title : 'Home'},languages);
+        	var params = extend({ title : 'COGNATIVE COMPANY'},languages);
         	res.render('index',params);
         }
 	});
@@ -84,6 +84,7 @@ var createDatabase = function (callback) {
      db = cloudant.db.use(dbname);
      callback(err, data);
  });
+ 
 };
 
 //create a document
