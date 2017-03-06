@@ -83,7 +83,7 @@ var toneAnalyzer = new ToneAnalyzerV3({
 //load the Cloudant library
 var async = require('async'),
 Cloudant = require('cloudant'),
-CLOUDANT_URL = 'https://.cloudant.com',
+CLOUDANT_URL = 'https://www.cloudant.com',
 cloudant = Cloudant({url: CLOUDANT_URL}),
 dbname = 'crud',
 db = null,
@@ -218,6 +218,27 @@ app.get('/api/translate', function (req, res, next) {
 
 	app.get('/api/history', function (req, res, next) {
 		console.log('/v2/history');
+		var offset = req.query.offset?req.query.offset:0;
+		var limit = req.query.limit?req.query.limit:5;
+		limit = Math.min(100,limit);
+		
+		
+		res.send('history<br/><pre>' + '</pre>');
+	});
+	app.get('/api/createdb', function (req, res, next) {
+		console.log('/createdb');
+		// create a database
+		var createDatabase = function(callback) {
+		  console.log("Creating database '" + dbname  + "'");
+		  cloudant.db.create(dbname, function(err, data) {
+		    console.log("Error:", err);
+		    console.log("Data:", data);
+		    db = cloudant.db.use(dbname);
+		    callback(err, data);
+		  });
+		};
+
+		
 		res.send('history<br/><pre>' + '</pre>');
 	});
 
