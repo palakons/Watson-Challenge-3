@@ -14,6 +14,8 @@ import loadRoutes from './common/loadRoutes';
 import logger from './common/logger';
 import extend from 'extend';
 var request = require('request');
+var http = require('http');
+var Cloudant = require('cloudant');
 
 
 const app = express();
@@ -24,30 +26,67 @@ app.get('/', function (req, res) {
 	res.send('hello not so big world, lol<br/><pre>' + '</pre>');
 });
 
+
+// FUNCTIONS ================================================
 function makeTranslation(sourceText, sourceLanguageCode, destinationLanguageCode, sourceTextTone, translatedText, translatedTextTone) {
 	return {
 		'Translation': {
-			'properties': {
-				'sourceText': sourceText
-				, 'sourceLanguageCode': sourceLanguageCode
-				, 'destinationLanguageCode': destinationLanguageCode
-				, 'sourceTextTone': sourceTextTone
-				, 'translatedText': translatedText
-				, 'translatedTextTone': translatedTextTone
-			}
+			'sourceText': sourceText
+			, 'sourceLanguageCode': sourceLanguageCode
+			, 'destinationLanguageCode': destinationLanguageCode
+			, 'sourceTextTone': sourceTextTone
+			, 'translatedText': translatedText
+			, 'translatedTextTone': translatedTextTone
 		}
 	};
 }
 function makeError(code, message) {
 	return {
 		'Error': {
-			'properties': {
-				'code': code
-				, 'message': message
-			}
+			'code': code
+			, 'message': message
 		}
 	};
 }
+
+//create a database
+var createDatabase = function (callback) {
+ console.log("Creating database '" + dbname + "'");
+ cloudant.db.create(dbname, function (err, data) {
+     console.log("Error:", err);
+     console.log("Data:", data);
+     db = cloudant.db.use(dbname);
+     callback(err, data);
+ });
+};
+
+//create a document
+var createDocument = function(data,callback) {
+console.log("Creating document 'data'");
+//we are specifying the id of the document so we can update and delete it later
+db.insert(data, function(err, data) {
+console.log("Error:", err);
+console.log("Data:", data);
+callback(err, data);
+});
+};
+
+
+//read a document
+var readDocument = function (params,callback) {
+ console.log("Reading document 'mydoc'");
+ db.list({include_docs:true,
+	 "sort": [{"time": "desc"}],
+	  "limit": params.limit,
+	  "skip": params.offset
+	  }
+ , function (err, data) {
+     console.log("Error:", err);
+     console.log("Data:", data);
+     // keep a copy of the doc so we know its revision token
+     callback(err, data);
+ });
+};
 
 // ========================================================================
 
@@ -79,15 +118,26 @@ var toneAnalyzer = new ToneAnalyzerV3({
 	version_date: '2016-05-19'
 });
 
+//Obtain the db interface from VCAP_SERVICES
+if (process.env.VCAP_SERVICES) {
+	  // Running on Bluemix. Parse the process.env for the port and host that we've been assigned.
+	  var env = JSON.parse(process.env.VCAP_SERVICES);
+	  var host = process.env.VCAP_APP_HOST; 
+	  var port = process.env.VCAP_APP_PORT;
+	  console.log('VCAP_SERVICES: %s', process.env.VCAP_SERVICES);    
+	  // Also parse out Cloudant settings.
+	  var cloudant = Cloudant(env['cloudantNoSQLDB'][0]['credentials']);
+	  var dbname  = 'history';
+	  var db = null;
+}
+createDatabase(function (err, data) {
+    if (err && err.statusCode != 412) { //error or db existed
+        console.log('DB Create Error ' + JSON.stringify(err));
+    } 
+});
+var availableLanguages = null;
 
-//load the Cloudant library
-var async = require('async'),
-Cloudant = require('cloudant'),
-CLOUDANT_URL = 'https://www.cloudant.com',
-cloudant = Cloudant({url: CLOUDANT_URL}),
-dbname = 'crud',
-db = null,
-doc = null;
+
 
 /*
  * 3. Create a GET API request with 2 endpoints - /api/translate - /api/history
@@ -102,16 +152,11 @@ app.get('/api/translate', function (req, res, next) {
 
     console.log(JSON.stringify(req.query));
     // check if inputs are defined
-    /*
-       * if(req.query.sourceLanguageCode && req.query.destinationLanguageCode &&
-       * req.query.sourceText )
-       * res.status(400).json(makeError('400','sourceLanguageCode,
-       * destinationLanguageCode and sourceText must be defined.'));
-       */
-
-
+    if(req.query.sourceLanguageCode == undefined || req.query.destinationLanguageCode== undefined || req.query.sourceText== undefined ){
+    	res.status(400).json(makeError('400','sourceLanguageCode,destinationLanguageCode and sourceText must be defined.'));
+    }
     // check if inputs are non-empty
-    if (req.query.sourceLanguageCode == '' || req.query.destinationLanguageCode == '' || req.query.sourceText == '') {
+    else if (req.query.sourceLanguageCode == '' || req.query.destinationLanguageCode == '' || req.query.sourceText == '') {
         res.status(400).json(makeError('400', 'sourceLanguageCode, destinationLanguageCode and sourceText must be non-empty.'));
     } else {
 
@@ -123,18 +168,18 @@ app.get('/api/translate', function (req, res, next) {
                 else {
                     var sourceLanguageCodeOK = false;
                     var targetLanguageCodeOK = false;
+                    availableLanguages = languages;
                     for (var i in languages.languages) {
                     	var ele = languages.languages[i];
-                    	console.log(' -----in loop');
-                    	console.log(JSON.stringify(ele));
+                    	//console.log(JSON.stringify(ele));
 
                         if (ele.language === textSource.source) {
                             sourceLanguageCodeOK = true;
-                            console.log('matched'+textSource.source);
+                            //console.log('matched'+textSource.source);
                         }
                         if (ele.language === textSource.target){
                             targetLanguageCodeOK = true;
-                            console.log('matched'+textSource.target);
+                            //console.log('matched'+textSource.target);
                         }
                     }
                     if (!sourceLanguageCodeOK || !targetLanguageCodeOK)
@@ -146,7 +191,7 @@ app.get('/api/translate', function (req, res, next) {
                                 console.log(err)
                             else {
                                 console.log('models');
-                                console.log(JSON.stringify(models));
+                                //console.log(JSON.stringify(models));
                                 var foundPair = false;
                                 for( var i in models.models){
                                 	if(models.models[i].target === textSource.target) {
@@ -173,15 +218,17 @@ app.get('/api/translate', function (req, res, next) {
                                                     else {
                                                         // console.log(JSON.stringify(tone, null, 2));
                                                         console.log('tone');
-                                                        console.log(JSON.stringify(tone));
+                                                        //console.log(JSON.stringify(tone));
                                                         for (var i in tone.document_tone.tone_categories) {
 
-                                                            tone.document_tone.tone_categories[i].tones.sort(function (a, b) {
-                                                                return b.score - a.score;
-                                                            });
-                                                            sourceTone += tone.document_tone.tone_categories[i].tones[0].tone_name + '('+tone.document_tone.tone_categories[i].tones[0].score+'), ';
+                                                            if(tone.document_tone.tone_categories[i].category_id == 'emotion_tone'){ 
+	                                                            tone.document_tone.tone_categories[i].tones.sort(function (a, b) {
+	                                                                return b.score - a.score;
+	                                                            });
+	                                                            sourceTone += tone.document_tone.tone_categories[i].tones[0].tone_name + ' ('+tone.document_tone.tone_categories[i].tones[0].score+')';
+                                                             }
                                                         }
-                                                        sourceTone = sourceTone.substr(0,sourceTone.length-2);
+                                                        //sourceTone = sourceTone.substr(0,sourceTone.length-2);
                                                         // call tone analyzer to translated text
                                                         toneAnalyzer.tone({ text: models.translations[0].translation },
                                                             function (err, tone) {
@@ -191,16 +238,25 @@ app.get('/api/translate', function (req, res, next) {
                                                                     // console.log(JSON.stringify(tone, null,
                                                                     // 2));
                                                                     for (var i in tone.document_tone.tone_categories) {
-
-                                                                        tone.document_tone.tone_categories[i].tones.sort(function (a, b) {
-                                                                            return b.score - a.score;
-                                                                        });
-                                                                        targetTone += tone.document_tone.tone_categories[i].tones[0].tone_name + '('+tone.document_tone.tone_categories[i].tones[0].score+'), ';
+                                                                        if(tone.document_tone.tone_categories[i].category_id == 'emotion_tone'){ 
+	                                                                        tone.document_tone.tone_categories[i].tones.sort(function (a, b) {
+	                                                                            return b.score - a.score;
+	                                                                        });
+	                                                                        targetTone += tone.document_tone.tone_categories[i].tones[0].tone_name + ' ('+tone.document_tone.tone_categories[i].tones[0].score+')';
+                                                                        }
                                                                     }
-                                                                    targetTone = targetTone.substr(0,targetTone.length-2);
+                                                                    //targetTone = targetTone.substr(0,targetTone.length-2);
                                                                     // now we have all data
+                                                                    var translationOutput = makeTranslation(textSource.text, textSource.source, textSource.target, sourceTone, models.translations[0].translation, targetTone);
                                                                     // push into DB
-                                                                    res.status(200).json(makeTranslation(textSource.text, textSource.source, textSource.target, sourceTone, models.translations[0].translation, targetTone));
+                                                                    createDocument(extend({'time':Date.now()},translationOutput), function (err, data) {
+                                                                        if (err) {
+                                                                            res.json(err);
+                                                                        }
+                                                                    });
+                                                                    //return json
+                                                                    console.log(JSON.stringify(translationOutput));
+                                                                    res.status(200).json(translationOutput);
                                                                 }
                                                             });
                                                     }
@@ -214,33 +270,49 @@ app.get('/api/translate', function (req, res, next) {
             });
     }
 });
+app.get('/api/history', function (req, res, next) {
+    console.log('/v2/history');
+    var offset = req.query.offset ? req.query.offset : 0;
+    var limit = req.query.limit ? req.query.limit : 5;
+    limit = Math.min(100, limit);
+    //res.send('history<br/><pre>' + '</pre>');
 
-
-	app.get('/api/history', function (req, res, next) {
-		console.log('/v2/history');
-		var offset = req.query.offset?req.query.offset:0;
-		var limit = req.query.limit?req.query.limit:5;
-		limit = Math.min(100,limit);
-		
-		
-		res.send('history<br/><pre>' + '</pre>');
+	readDocument({'offset':offset, 'limit':limit},function (err, data) {
+	    if(err ){ 
+	        res.json(err);
+	    }else{
+	    	console.log('/rad data ok');
+	    	console.log(JSON.stringify(data));
+	    	//process data
+	    	var translations = new Array();
+	    	for(var i in data.rows){
+		    	translations.push({'Translation':data.rows[i].doc.Translation});
+	    	}
+	        res.json(translations);
+	    }
 	});
-	app.get('/api/createdb', function (req, res, next) {
-		console.log('/createdb');
-		// create a database
-		var createDatabase = function(callback) {
-		  console.log("Creating database '" + dbname  + "'");
-		  cloudant.db.create(dbname, function(err, data) {
-		    console.log("Error:", err);
-		    console.log("Data:", data);
-		    db = cloudant.db.use(dbname);
-		    callback(err, data);
-		  });
-		};
 
-		
-		res.send('history<br/><pre>' + '</pre>');
-	});
+});
+
+/*app.get('/api/deletedb', function (req, res, next) {
+    console.log('/deletedb');
+
+    // deleting the database document
+    var deleteDatabase = function (callback) {
+        console.log("Deleting database '" + dbname + "'");
+        cloudant.db.destroy(dbname, function (err, data) {
+            console.log("Error:", err);
+            console.log("Data:", data);
+            callback(err, data);
+            res.send('deleteDB<br/><pre>' + '</pre>');
+        });
+
+        deleteDatabase(function (err, data) {
+        	console.log(err);
+            console.log(data);
+        });
+    };
+}); */
 
 	/*
 	 * 4. Implement the API defined in the attached Swagger doc. You may use
