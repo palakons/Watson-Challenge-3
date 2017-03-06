@@ -89,6 +89,9 @@
     "express-wrap-async": "^1.0.2",
     "http-errors": "^1.5.0",
     "joi": "^10.0.6",
+    "jade": "^1.0.4",
+    "stylus": "^0.49.1",
+    "nib": "^1.0.4",
     "lodash": "^4.17.2",
     "watson-developer-cloud": "~2.15.2",
     "cloudant": "^1.3.0"

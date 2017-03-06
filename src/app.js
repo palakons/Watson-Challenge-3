@@ -16,17 +16,41 @@ import extend from 'extend';
 var request = require('request');
 var http = require('http');
 var Cloudant = require('cloudant');
+var stylus = require('stylus');
+var nib = require('nib');
 
 
 const app = express();
 app.set('port', config.PORT);
 
+
+app.set('view engine', 'jade');
+function compile(str, path) {
+  return stylus(str)
+    .set('filename', path)
+    .use(nib())
+}
+app.set('views', __dirname + '/../views')
+app.set('view engine', 'jade')
+//app.use(express.logger('dev'))
+app.use(stylus.middleware(
+  { src: __dirname + '/../public'
+  , compile: compile
+  }
+))
+app.use(express.static(__dirname + '/../public'));
 // respond with "hello world" when a GET request is made to the homepage
 app.get('/', function (req, res) {
-	  res.render('index',
-	  { title : 'Home' }
-	  )
+	translator.getIdentifiableLanguages(null,
+    function (err, languages) {
+        if (err)
+            console.log(err)
+        else {
+        	var params = extend({ title : 'Home'},languages);
+        	res.render('index',params);
+        }
 	});
+});
 
 
 // FUNCTIONS ================================================
