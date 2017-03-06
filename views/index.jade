@@ -1,14 +1,12 @@
 extend layout
 block content
-  p
-    | Enter Source String
-    input#soureText(type="text")
-    | Enter source String in English (preferably less than 1,000 character)
-  p
-    | Enter Destination String
-    select
-      each lang in languages
-        option(value="#{lang.language}") #{lang.name}
-    | Select target language
+  h4 Enter Source String
+  input#soureText(type="text")
+  span.footer Enter source String in English (preferably less than 1,000 character)
+  h4 span Enter Destination String
+  select
+    each lang in languages
+      option(value="#{lang.language}") #{lang.name}
+  span.footer Select target language
   p
     input(type="submit", value="Translate & Analyze")
