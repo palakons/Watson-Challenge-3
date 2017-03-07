@@ -42,14 +42,41 @@ app.use(express.static(__dirname + '/../public'));
 // respond with "hello world" when a GET request is made to the homepage
 app.get('/', function (req, res) {
 	translator.getIdentifiableLanguages(null,
-    function (err, languages) {
-        if (err)
-            console.log(err)
-        else {
-        	var params = extend({ title : 'COGNATIVE COMPANY'},languages);
-        	res.render('index',params);
-        }
-	});
+	    function (err, languages) {
+	        if (err)
+	            console.log(err)
+	        else {
+	        	//inverse array
+	        	var langList = {};
+	            console.log(JSON.stringify(languages.languages));
+
+	            for( var i in languages.languages){
+	            	langList[languages.languages[i].language] = languages.languages[i];
+	            }
+	            console.log(JSON.stringify(langList));
+	            languages.languages = [];
+	        	//-----
+	        	translator.getModels({ 'source': 'en' }, function (err, models) {
+	                if (err)
+	                    console.log(err)
+	                else {
+	                    console.log('models');
+	                    for( var i in models.models){
+	                    	
+	                    	if(langList[models.models[i].target]!=undefined){
+	                    		languages.languages.push(langList[models.models[i].target]);
+	                    	}else{
+	                    		console.log('Cannot find: '+models.models[i].target);
+	                    	}
+	                    }
+	    	            console.log(JSON.stringify(languages.languages));
+	                	var params = extend({ title : 'COGNATIVE COMPANY'},languages);
+	                	res.render('index',params);
+	                }
+	        	});
+	        }
+		});
+	
 });
 
 
@@ -102,15 +129,11 @@ callback(err, data);
 //read a document
 var readDocument = function (params,callback) {
  console.log("Reading document 'mydoc'");
- db.list({include_docs:true,
-	 "sort": [{"time": "desc"}],
-	  "limit": params.limit,
-	  "skip": params.offset
-	  }
+ db.list({include_docs:true}
  , function (err, data) {
      console.log("Error:", err);
      console.log("Data:", data);
-     // keep a copy of the doc so we know its revision token
+
      callback(err, data);
  });
 };
@@ -154,8 +177,13 @@ if (process.env.VCAP_SERVICES) {
 	  console.log('VCAP_SERVICES: %s', process.env.VCAP_SERVICES);    
 	  // Also parse out Cloudant settings.
 	  var cloudant = Cloudant(env['cloudantNoSQLDB'][0]['credentials']);
+	  console.log(JSON.stringify(env['cloudantNoSQLDB'][0]['credentials']));
 	  var dbname  = 'history';
 	  var db = null;
+
+	  cloudant.db.list(function(err, allDbs) {
+	    console.log('All my databases: %s', allDbs.join(', '))
+	  });
 }
 createDatabase(function (err, data) {
     if (err && err.statusCode != 412) { //error or db existed
@@ -299,12 +327,11 @@ app.get('/api/translate', function (req, res, next) {
 });
 app.get('/api/history', function (req, res, next) {
     console.log('/v2/history');
-    var offset = req.query.offset ? req.query.offset : 0;
-    var limit = req.query.limit ? req.query.limit : 5;
+    var limit = req.query.num ? req.query.num : 5;
     limit = Math.min(100, limit);
     //res.send('history<br/><pre>' + '</pre>');
 
-	readDocument({'offset':offset, 'limit':limit},function (err, data) {
+	readDocument({'limit':limit},function (err, data) {
 	    if(err ){ 
 	        res.json(err);
 	    }else{
@@ -312,8 +339,13 @@ app.get('/api/history', function (req, res, next) {
 	    	console.log(JSON.stringify(data));
 	    	//process data
 	    	var translations = new Array();
+	    	data.rows.sort(function (a, b) {
+                return b.doc.time - a.doc.time;
+            });
 	    	for(var i in data.rows){
 		    	translations.push({'Translation':data.rows[i].doc.Translation});
+		    	if(i==limit-1)
+		    		break;
 	    	}
 	        res.json(translations);
 	    }

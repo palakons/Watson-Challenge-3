@@ -1,17 +1,17 @@
 extend layout
 block content
   h4 Enter Source String
-  textarea#soureText(rows="6" cols="100")
+  textarea#sourceText(rows="6" cols="100")
   p 
     span.footer Enter source String in English (preferably less than 1,000 character)
   p 
   p 
   h4 Enter Destination String
-  select
+  select#destLang
     each lang in languages
       option(value="#{lang.language}") #{lang.name}
   p 
     span.footer Select target language
   p 
   p
-    input(type="submit", value="Translate & Analyze" onclick="useAPI();")
+    input(type="submit", value="Translate & Analyze" onclick="getHistory('history-content',$('#sourceText')[0].value,'en',$('#destLang')[0].value,'completed-transaction',useAPI);")
