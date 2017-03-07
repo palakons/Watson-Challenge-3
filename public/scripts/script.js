@@ -25,19 +25,20 @@ function useAPI(text,source,dest,output){
 	
 	$.get(url,reqData,callback);
 }
-function getHistory(output,text,source,dest,output2,callback_tran){
+function getHistory(output,ttext,source,dest,output2,callback_tran){
 	console.log('LOCAL history API now');
 	var url = '/api/history';
 	var reqData = {'num':5};
+	console.log(ttext,source,dest,output2);
 	function callback(data, textStatus, jqXHR){
 
-		console.log(text,source,dest,output2);
-		callback_tran(text,source,dest,output2);
+		console.log(ttext,source,dest,output2);
+		callback_tran(ttext,source,dest,output2);
 		console.log(data,textStatus,jqXHR);
 		var text = '<table class = "table"><thead><tr><th>No.</th><th>sourceText</th><th>destinationLanguageCode</th><th>translatedText</th></tr></thead>';
 		
 		for(var i in data) {
-			var j =i+1;
+			var j = parseInt(i)+1;
 			text += '<tr><td>'+j+'</td><td>'+data[i].Translation.sourceText+'</td><td>'+data[i].Translation.destinationLanguageCode+'</td><td>'+data[i].Translation.translatedText+'</td></tr>';
 		}
 		text += '</table>';

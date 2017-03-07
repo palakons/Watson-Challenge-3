@@ -53,7 +53,7 @@ app.get('/', function (req, res) {
 	            for( var i in languages.languages){
 	            	langList[languages.languages[i].language] = languages.languages[i];
 	            }
-	            console.log(JSON.stringify(langList));
+	            //console.log(JSON.stringify(langList));
 	            languages.languages = [];
 	        	//-----
 	        	translator.getModels({ 'source': 'en' }, function (err, models) {
@@ -61,14 +61,19 @@ app.get('/', function (req, res) {
 	                    console.log(err)
 	                else {
 	                    console.log('models');
+	                    var langSet = new Set();
 	                    for( var i in models.models){
-	                    	
-	                    	if(langList[models.models[i].target]!=undefined){
-	                    		languages.languages.push(langList[models.models[i].target]);
-	                    	}else{
-	                    		console.log('Cannot find: '+models.models[i].target);
-	                    	}
+	                    	//console.log(JSON.stringify(langList[models.models[i].target]));
+	                    	langSet.add(models.models[i].target);
 	                    }
+
+                    	for (let item of langSet) {
+                        	if(langList[item]!=undefined){
+                        		languages.languages.push(langList[item]);
+                        	}else{
+                        		console.log('Cannot find: '+item);
+                        	}
+                    	}
 	    	            console.log(JSON.stringify(languages.languages));
 	                	var params = extend({ title : 'COGNATIVE COMPANY'},languages);
 	                	res.render('index',params);
