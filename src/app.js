@@ -26,62 +26,52 @@ app.set('port', config.PORT);
 
 app.set('view engine', 'jade');
 function compile(str, path) {
-  return stylus(str)
-    .set('filename', path)
-    .use(nib())
+	return stylus(str)
+		.set('filename', path)
+		.use(nib())
 }
 app.set('views', __dirname + '/../views')
 app.set('view engine', 'jade')
 //app.use(express.logger('dev'))
 app.use(stylus.middleware(
-  { src: __dirname + '/../public'
-  , compile: compile
-  }
+	{
+		src: __dirname + '/../public'
+		, compile: compile
+	}
 ))
 app.use(express.static(__dirname + '/../public'));
 // respond with "hello world" when a GET request is made to the homepage
+
 app.get('/', function (req, res) {
-	translator.getIdentifiableLanguages(null,
-	    function (err, languages) {
-	        if (err)
-	            console.log(err)
-	        else {
-	        	//inverse array
-	        	var langList = {};
-	            console.log(JSON.stringify(languages.languages));
+	var languages = JSON.parse(JSON.stringify(availableLanguages));
+	//console.log(JSON.stringify(languages.languages));
+	//console.log(JSON.stringify(langList));
+	languages.languages = [];
+	//-----
+	translator.getModels({ 'source': 'en' }, function (err, models) {
+		if (err)
+			console.log(err)
+		else {
+			console.log('models');
+			var langSet = new Set();
+			for (var i in models.models) {
+				//console.log(JSON.stringify(langList[models.models[i].target]));
+				langSet.add(models.models[i].target);
+			}
 
-	            for( var i in languages.languages){
-	            	langList[languages.languages[i].language] = languages.languages[i];
-	            }
-	            //console.log(JSON.stringify(langList));
-	            languages.languages = [];
-	        	//-----
-	        	translator.getModels({ 'source': 'en' }, function (err, models) {
-	                if (err)
-	                    console.log(err)
-	                else {
-	                    console.log('models');
-	                    var langSet = new Set();
-	                    for( var i in models.models){
-	                    	//console.log(JSON.stringify(langList[models.models[i].target]));
-	                    	langSet.add(models.models[i].target);
-	                    }
+			for (let item of langSet) {
+				if (langList[item] != undefined) {
+					languages.languages.push(langList[item]);
+				} else {
+					console.log('Cannot find: ' + item);
+				}
+			}
+			console.log(JSON.stringify(languages.languages));
+			var params = extend({ title: 'COGNATIVE COMPANY' }, languages);
+			res.render('index', params);
+		}
+	});
 
-                    	for (let item of langSet) {
-                        	if(langList[item]!=undefined){
-                        		languages.languages.push(langList[item]);
-                        	}else{
-                        		console.log('Cannot find: '+item);
-                        	}
-                    	}
-	    	            console.log(JSON.stringify(languages.languages));
-	                	var params = extend({ title : 'COGNATIVE COMPANY'},languages);
-	                	res.render('index',params);
-	                }
-	        	});
-	        }
-		});
-	
 });
 
 
@@ -109,38 +99,38 @@ function makeError(code, message) {
 
 //create a database
 var createDatabase = function (callback) {
- console.log("Creating database '" + dbname + "'");
- cloudant.db.create(dbname, function (err, data) {
-     console.log("Error:", err);
-     console.log("Data:", data);
-     db = cloudant.db.use(dbname);
-     callback(err, data);
- });
- 
+	console.log("Creating database '" + dbname + "'");
+	cloudant.db.create(dbname, function (err, data) {
+		console.log("Error:", err);
+		console.log("Data:", data);
+		db = cloudant.db.use(dbname);
+		callback(err, data);
+	});
+
 };
 
 //create a document
-var createDocument = function(data,callback) {
-console.log("Creating document 'data'");
-//we are specifying the id of the document so we can update and delete it later
-db.insert(data, function(err, data) {
-console.log("Error:", err);
-console.log("Data:", data);
-callback(err, data);
-});
+var createDocument = function (data, callback) {
+	console.log("Creating document 'data'");
+	//we are specifying the id of the document so we can update and delete it later
+	db.insert(data, function (err, data) {
+		console.log("Error:", err);
+		console.log("Data:", data);
+		callback(err, data);
+	});
 };
 
 
 //read a document
-var readDocument = function (params,callback) {
- console.log("Reading document 'mydoc'");
- db.list({include_docs:true}
- , function (err, data) {
-     console.log("Error:", err);
-     console.log("Data:", data);
+var readDocument = function (params, callback) {
+	console.log("Reading document 'mydoc'");
+	db.list({ include_docs: true }
+		, function (err, data) {
+			console.log("Error:", err);
+			console.log("Data:", data);
 
-     callback(err, data);
- });
+			callback(err, data);
+		});
 };
 
 // ========================================================================
@@ -162,6 +152,23 @@ var translator = new LanguageTranslatorV2({
 																	 */
 });
 
+var availableLanguages = null;
+var langList = {};
+
+translator.getIdentifiableLanguages(null,
+	function (err, languages) {
+		if (err)
+			console.log(err)
+		else {
+			availableLanguages = JSON.parse(JSON.stringify(languages));
+			//inverse lang list
+			for (var i in availableLanguages.languages) {
+				langList[availableLanguages.languages[i].language] = availableLanguages.languages[i];
+			}
+		}
+	});
+
+
 var ToneAnalyzerV3 = require('watson-developer-cloud/tone-analyzer/v3');
 var toneAnalyzer = new ToneAnalyzerV3({
 	// If unspecified here, the TONE_ANALYZER_USERNAME and
@@ -175,27 +182,26 @@ var toneAnalyzer = new ToneAnalyzerV3({
 
 //Obtain the db interface from VCAP_SERVICES
 if (process.env.VCAP_SERVICES) {
-	  // Running on Bluemix. Parse the process.env for the port and host that we've been assigned.
-	  var env = JSON.parse(process.env.VCAP_SERVICES);
-	  var host = process.env.VCAP_APP_HOST; 
-	  var port = process.env.VCAP_APP_PORT;
-	  console.log('VCAP_SERVICES: %s', process.env.VCAP_SERVICES);    
-	  // Also parse out Cloudant settings.
-	  var cloudant = Cloudant(env['cloudantNoSQLDB'][0]['credentials']);
-	  console.log(JSON.stringify(env['cloudantNoSQLDB'][0]['credentials']));
-	  var dbname  = 'history';
-	  var db = null;
+	// Running on Bluemix. Parse the process.env for the port and host that we've been assigned.
+	var env = JSON.parse(process.env.VCAP_SERVICES);
+	var host = process.env.VCAP_APP_HOST;
+	var port = process.env.VCAP_APP_PORT;
+	console.log('VCAP_SERVICES: %s', process.env.VCAP_SERVICES);
+	// Also parse out Cloudant settings.
+	var cloudant = Cloudant(env['cloudantNoSQLDB'][0]['credentials']);
+	console.log(JSON.stringify(env['cloudantNoSQLDB'][0]['credentials']));
+	var dbname = 'history';
+	var db = null;
 
-	  cloudant.db.list(function(err, allDbs) {
-	    console.log('All my databases: %s', allDbs.join(', '))
-	  });
+	cloudant.db.list(function (err, allDbs) {
+		console.log('All my databases: %s', allDbs.join(', '))
+	});
 }
 createDatabase(function (err, data) {
-    if (err && err.statusCode != 412) { //error or db existed
-        console.log('DB Create Error ' + JSON.stringify(err));
-    } 
+	if (err && err.statusCode != 412) { //error or db existed
+		console.log('DB Create Error ' + JSON.stringify(err));
+	}
 });
-var availableLanguages = null;
 
 
 
@@ -203,157 +209,151 @@ var availableLanguages = null;
  * 3. Create a GET API request with 2 endpoints - /api/translate - /api/history
  */
 
-
-
 app.get('/api/translate', function (req, res, next) {
-    console.log('/v2/translate');
+	console.log('/v2/translate');
 
-    var textSource = { 'source': req.query.sourceLanguageCode, 'target': req.query.destinationLanguageCode, 'text': req.query.sourceText };
+	var textSource = { 'source': req.query.sourceLanguageCode, 'target': req.query.destinationLanguageCode, 'text': req.query.sourceText };
 
-    console.log(JSON.stringify(req.query));
-    // check if inputs are defined
-    if(req.query.sourceLanguageCode == undefined || req.query.destinationLanguageCode== undefined || req.query.sourceText== undefined ){
-    	res.status(400).json(makeError('400','sourceLanguageCode,destinationLanguageCode and sourceText must be defined.'));
-    }
-    // check if inputs are non-empty
-    else if (req.query.sourceLanguageCode == '' || req.query.destinationLanguageCode == '' || req.query.sourceText == '') {
-        res.status(400).json(makeError('400', 'sourceLanguageCode, destinationLanguageCode and sourceText must be non-empty.'));
-    } else {
+	console.log(JSON.stringify(req.query));
+	// check if inputs are defined
+	if (req.query.sourceLanguageCode == undefined || req.query.destinationLanguageCode == undefined || req.query.sourceText == undefined) {
+		res.status(400).json(makeError('400', 'sourceLanguageCode,destinationLanguageCode and sourceText must be defined.'));
+	}
+	// check if inputs are non-empty
+	else if (req.query.sourceLanguageCode == '' || req.query.destinationLanguageCode == '' || req.query.sourceText == '') {
+		res.status(400).json(makeError('400', 'sourceLanguageCode, destinationLanguageCode and sourceText must be non-empty.'));
+	} else {
 
-        // check if language code exists
-        translator.getIdentifiableLanguages(null,
-            function (err, languages) {
-                if (err)
-                    console.log(err)
-                else {
-                    var sourceLanguageCodeOK = false;
-                    var targetLanguageCodeOK = false;
-                    availableLanguages = languages;
-                    for (var i in languages.languages) {
-                    	var ele = languages.languages[i];
-                    	//console.log(JSON.stringify(ele));
+		// check if language code exists
+		var sourceLanguageCodeOK = false;
+		var targetLanguageCodeOK = false;
+		console.log('available Language');
+		console.log(JSON.stringify(availableLanguages.languages));
+		for (var i in availableLanguages.languages) {
+			var ele = availableLanguages.languages[i];
+			//console.log(JSON.stringify(ele));
 
-                        if (ele.language === textSource.source) {
-                            sourceLanguageCodeOK = true;
-                            //console.log('matched'+textSource.source);
-                        }
-                        if (ele.language === textSource.target){
-                            targetLanguageCodeOK = true;
-                            //console.log('matched'+textSource.target);
-                        }
-                    }
-                    if (!sourceLanguageCodeOK || !targetLanguageCodeOK)
-                        res.status(400).json(makeError('400', 'Invalid sourceLanguageCode or destinationLanguageCode is not supported.'));
-                    else
-                        // check if language pair is OK
-                        translator.getModels({ 'source': textSource.source }, function (err, models) {
-                            if (err)
-                                console.log(err)
-                            else {
-                                console.log('models');
-                                //console.log(JSON.stringify(models));
-                                var foundPair = false;
-                                for( var i in models.models){
-                                	if(models.models[i].target === textSource.target) {
-                                		foundPair = true;
-                                		break;
-                                	}
-                                }
-                                if (!foundPair) {
-                                    res.status(400).json(makeError('400', 'Invalid sourceLanguageCode / destinationLanguageCode combination.'));
-                                } else {
-                                    var params = extend({ 'X-WDC-PL-OPT-OUT': req.header('X-WDC-PL-OPT-OUT') }, textSource);
-                                    translator.translate(params, function (err, models) {
-                                        if (err)
-                                            return next(err);
-                                        else {
+			if (ele.language === textSource.source) {
+				sourceLanguageCodeOK = true;
+				console.log('matched'+textSource.source);
+			}
+			if (ele.language === textSource.target) {
+				targetLanguageCodeOK = true;
+				console.log('matched'+textSource.target);
+			}
+		}
+		if (!sourceLanguageCodeOK || !targetLanguageCodeOK)
+			res.status(400).json(makeError('400', 'Invalid sourceLanguageCode or destinationLanguageCode.'));
+		else
+			// check if language pair is OK
+			translator.getModels({ 'source': textSource.source }, function (err, models) {
+				if (err)
+					console.log(err)
+				else {
+					console.log('models');
+					//console.log(JSON.stringify(models));
+					var foundPair = false;
+					for (var i in models.models) {
+						if (models.models[i].target === textSource.target) {
+							foundPair = true;
+							break;
+						}
+					}
+					if (!foundPair) {
+						res.status(400).json(makeError('400', 'Invalid sourceLanguageCode / destinationLanguageCode combination.'));
+					} else {
+						var params = extend({ 'X-WDC-PL-OPT-OUT': req.header('X-WDC-PL-OPT-OUT') }, textSource);
+						translator.translate(params, function (err, models) {
+							if (err)
+								return next(err);
+							else {
 
-                                            var sourceTone = '';
-                                            var targetTone = '';
-                                            // call tone analyzer to source text
-                                            toneAnalyzer.tone({ text: textSource.text },
-                                                function (err, tone) {
-                                                    if (err)
-                                                        console.log(err);
-                                                    else {
-                                                        // console.log(JSON.stringify(tone, null, 2));
-                                                        console.log('tone');
-                                                        //console.log(JSON.stringify(tone));
-                                                        for (var i in tone.document_tone.tone_categories) {
+								var sourceTone = null;
+								var targetTone = null;
+								// call tone analyzer to source text
+								toneAnalyzer.tone({ text: textSource.text },
+									function (err, tone) {
+										if (err)
+											console.log(err);
+										else {
+											// console.log(JSON.stringify(tone, null, 2));
+											console.log('tone');
+											//console.log(JSON.stringify(tone));
+											/*for (var i in tone.document_tone.tone_categories) {
 
-                                                            if(tone.document_tone.tone_categories[i].category_id == 'emotion_tone'){ 
-	                                                            tone.document_tone.tone_categories[i].tones.sort(function (a, b) {
-	                                                                return b.score - a.score;
-	                                                            });
-	                                                            sourceTone += tone.document_tone.tone_categories[i].tones[0].tone_name + ' ('+tone.document_tone.tone_categories[i].tones[0].score+')';
-                                                             }
-                                                        }
-                                                        //sourceTone = sourceTone.substr(0,sourceTone.length-2);
-                                                        // call tone analyzer to translated text
-                                                        toneAnalyzer.tone({ text: models.translations[0].translation },
-                                                            function (err, tone) {
-                                                                if (err)
-                                                                    console.log(err);
-                                                                else {
-                                                                    // console.log(JSON.stringify(tone, null,
-                                                                    // 2));
-                                                                    for (var i in tone.document_tone.tone_categories) {
-                                                                        if(tone.document_tone.tone_categories[i].category_id == 'emotion_tone'){ 
-	                                                                        tone.document_tone.tone_categories[i].tones.sort(function (a, b) {
-	                                                                            return b.score - a.score;
-	                                                                        });
-	                                                                        targetTone += tone.document_tone.tone_categories[i].tones[0].tone_name + ' ('+tone.document_tone.tone_categories[i].tones[0].score+')';
-                                                                        }
-                                                                    }
-                                                                    //targetTone = targetTone.substr(0,targetTone.length-2);
-                                                                    // now we have all data
-                                                                    var translationOutput = makeTranslation(textSource.text, textSource.source, textSource.target, sourceTone, models.translations[0].translation, targetTone);
-                                                                    // push into DB
-                                                                    createDocument(extend({'time':Date.now()},translationOutput), function (err, data) {
-                                                                        if (err) {
-                                                                            res.json(err);
-                                                                        }
-                                                                    });
-                                                                    //return json
-                                                                    console.log(JSON.stringify(translationOutput));
-                                                                    res.status(200).json(translationOutput);
-                                                                }
-                                                            });
-                                                    }
-                                                });
-                                        }
-                                    });
-                                }
-                            }
-                        });
-                }
-            });
-    }
+												if (tone.document_tone.tone_categories[i].category_id == 'emotion_tone') {
+													tone.document_tone.tone_categories[i].tones.sort(function (a, b) {
+														return b.score - a.score;
+													});
+													sourceTone += tone.document_tone.tone_categories[i].tones[0].tone_name + ' (' + tone.document_tone.tone_categories[i].tones[0].score + ')';
+												}
+											}*/
+											sourceTone = tone;
+											// call tone analyzer to translated text
+											toneAnalyzer.tone({ text: models.translations[0].translation },
+												function (err, tone) {
+													if (err)
+														console.log(err);
+													else {
+														// console.log(JSON.stringify(tone, null,
+														// 2));
+														/*for (var i in tone.document_tone.tone_categories) {
+															if (tone.document_tone.tone_categories[i].category_id == 'emotion_tone') {
+																tone.document_tone.tone_categories[i].tones.sort(function (a, b) {
+																	return b.score - a.score;
+																});
+																targetTone += tone.document_tone.tone_categories[i].tones[0].tone_name + ' (' + tone.document_tone.tone_categories[i].tones[0].score + ')';
+															}
+														}*/
+														targetTone = tone;
+														// now we have all data
+														var translationOutput = extend({ 'time': Date.now(),'destinationLanguage':langList[textSource.target].name,'sourceLanguage': langList[textSource.source].name}, makeTranslation(textSource.text, textSource.source, textSource.target, sourceTone, models.translations[0].translation, targetTone));
+														// push into DB
+														createDocument(translationOutput, function (err, data) {
+															if (err) {
+																res.json(err);
+															}
+														});
+														//return json
+														//console.log(JSON.stringify(translationOutput));
+														res.status(200).json(translationOutput);
+													}
+												});
+										}
+									});
+							}
+						});
+					}
+				}
+			});
+	}
 });
-app.get('/api/history', function (req, res, next) {
-    console.log('/v2/history');
-    var limit = req.query.num ? req.query.num : 5;
-    limit = Math.min(100, limit);
-    //res.send('history<br/><pre>' + '</pre>');
 
-	readDocument({'limit':limit},function (err, data) {
-	    if(err ){ 
-	        res.json(err);
-	    }else{
-	    	console.log('/rad data ok');
-	    	console.log(JSON.stringify(data));
-	    	//process data
-	    	var translations = new Array();
-	    	data.rows.sort(function (a, b) {
-                return b.doc.time - a.doc.time;
-            });
-	    	for(var i in data.rows){
-		    	translations.push({'Translation':data.rows[i].doc.Translation});
-		    	if(i==limit-1)
-		    		break;
-	    	}
-	        res.json(translations);
-	    }
+
+app.get('/api/history', function (req, res, next) {
+	console.log('/v2/history');
+	var limit = req.query.num ? req.query.num : 5;
+	limit = Math.min(100, limit);
+	//res.send('history<br/><pre>' + '</pre>');
+
+	readDocument({ 'limit': limit }, function (err, data) {
+		if (err) {
+			res.json(err);
+		} else {
+			console.log('/rad data ok');
+			//console.log(JSON.stringify(data));
+			//process data
+			var translations = new Array();
+			data.rows.sort(function (a, b) {
+				return b.doc.time - a.doc.time;
+			});
+			for (var i in data.rows) {
+				translations.push({ 'Translation': extend(data.rows[i].doc.Translation,{'destinationLanguage':langList[data.rows[i].doc.Translation.destinationLanguageCode].name}) });
+				if (i == limit - 1)
+					break;
+			}
+			res.json(translations);
+		}
 	});
 
 });
@@ -378,51 +378,51 @@ app.get('/api/history', function (req, res, next) {
     };
 }); */
 
-	/*
-	 * 4. Implement the API defined in the attached Swagger doc. You may use
-	 * editor.swagger.io generators if you wish. You also do not have to follow the
-	 * API to the letter. As long as the inputs and outputs work as required, you
-	 * are welcome to make additions or corrections as you see fit.
-	 */
+/*
+ * 4. Implement the API defined in the attached Swagger doc. You may use
+ * editor.swagger.io generators if you wish. You also do not have to follow the
+ * API to the letter. As long as the inputs and outputs work as required, you
+ * are welcome to make additions or corrections as you see fit.
+ */
 
-	/*
-	 * 5. Create a very simple UI that uses the above Api. A sample UI screenshot
-	 * are provided below. UI is provided for demonstration only, and not
-	 * necessarily to implement as is. Feel free to experiment with the UI. You will
-	 * not be critiqued on the design of your UI, only the functionality surfaced in
-	 * it.
-	 */
+/*
+ * 5. Create a very simple UI that uses the above Api. A sample UI screenshot
+ * are provided below. UI is provided for demonstration only, and not
+ * necessarily to implement as is. Feel free to experiment with the UI. You will
+ * not be critiqued on the design of your UI, only the functionality surfaced in
+ * it.
+ */
 
-	// ========================================================================
+// ========================================================================
 
-	app.use(cors());
-	app.use(bodyParser.json());
-	app.use(bodyParser.urlencoded({ extended: true }));
-	app.use(domainMiddleware);
+app.use(cors());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(domainMiddleware);
 
 
-	const apiRouter = new express.Router();
+const apiRouter = new express.Router();
 
-	loadRoutes(apiRouter, routes);
+loadRoutes(apiRouter, routes);
 
-	app.use('/api', apiRouter);
+app.use('/api', apiRouter);
 
-	app.use(errorHandler({
-		log: ({err, req, body}) => {
-			logger.error(err, `${body.status} ${req.method} ${req.url}`);
-		},
-	}));
+app.use(errorHandler({
+	log: ({ err, req, body }) => {
+		logger.error(err, `${body.status} ${req.method} ${req.url}`);
+	},
+}));
 
-	app.use(notFoundHandler({
-		log: ({req}) => {
-			logger.error(`404 ${req.method} ${req.url}`);
-		},
-	}));
+app.use(notFoundHandler({
+	log: ({ req }) => {
+		logger.error(`404 ${req.method} ${req.url}`);
+	},
+}));
 
-	if (!module.parent) {
-		app.listen(app.get('port'), () => {
-			logger.info(`Express server listening on port ${app.get('port')} in ${process.env.NODE_ENV} mode`);
-		});
-	}
+if (!module.parent) {
+	app.listen(app.get('port'), () => {
+		logger.info(`Express server listening on port ${app.get('port')} in ${process.env.NODE_ENV} mode`);
+	});
+}
 
-	export default app;
+export default app;

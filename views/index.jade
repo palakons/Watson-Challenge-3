@@ -1,17 +1,11 @@
 extend layout
 block content
-  h4 Enter Source String
-  input#sourceText(value="how are you doing to day mate?")
-  p 
-    span.footer Enter source String in English (preferably less than 1,000 character)
-  p 
-  p 
-  h4 Enter Destination String
-  select#destLang
-    each lang in languages
-      option(value="#{lang.language}") #{lang.name}
-  p 
-    span.footer Select target language
-  p 
-  p
-    input(type="submit", value="Translate & Analyze" onclick="getHistory('history-content',$('#sourceText')[0].value,'en',$('#destLang')[0].value,'completed-transaction',useAPI);")
+  .form-group
+    label(for="sourceText") Source String:
+    input#sourceText.form-control(placeholder="Inpput text goes here...")
+  .form-group
+    label(for="sourceText") Target Language:
+    select#destLang.form-control
+      each lang in languages
+        option(value="#{lang.language}") #{lang.name}
+  button.btn.btn-default(type="submit" onclick="getHistory('history-content',$('#sourceText')[0].value,'en',$('#destLang')[0].value,'completed-transaction',useAPI);") Translate & Analyze

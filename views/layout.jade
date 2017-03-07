@@ -1,19 +1,30 @@
 doctype
-html
+html(lang="en")
   head
     title #{title}
+    meta(charset="utf-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1")
     link(rel='stylesheet', href='https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/css/tether.min.css')
     link(rel='stylesheet', href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous")
-    link(rel='stylesheet', href='/stylesheets/style.css')
+    //
+      link(rel='stylesheet', href='/stylesheets/style.css')
   body
-    header
+    .jumbotron.text-center
       h1 COGNATIVE COMPANY
+      p Text Translations and Social Tone Analyses
+      block content
     .container
-      .main-content
-        block content
-        #completed-transaction
-        #history-content
+      .row
+        .col-sm-6
+          h3 Output
+          #completed-transaction
+        .col-sm-6
+          h3 History
+          #history-content.table-responsive
     script(src="https://code.jquery.com/jquery-3.1.1.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous")
     script(src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js")
     script(src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous")
     script(src="scripts/script.js")
+    script(src="https://www.amcharts.com/lib/3/amcharts.js")
+    script(src="https://www.amcharts.com/lib/3/serial.js")
+    
