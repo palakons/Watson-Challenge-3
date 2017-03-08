@@ -1,7 +1,8 @@
 
-getHistory('history-content', $('#sourceText')[0].value, 'en', $('#destLang')[0].value, 'completed-transaction', function () { });
+getHistory('history-content', $('#sourceText')[0].value, 'en', $('#destLang')[0].value, 'xxx', function () { });
 
 function useAPI(text, source, dest, output) {
+	//loding wheel activated
 	console.log('LOCAL translation API now');
 	var url = '/api/v1/translate';
 	var reqData = {
@@ -11,17 +12,22 @@ function useAPI(text, source, dest, output) {
 	};
 	function callback(data, textStatus, jqXHR) {
 		$('#' + output)[0].innerHTML = '';
-		$('#' + output)[0].innerHTML += '<p><a href="#" data-toggle="tooltip" title="' + data.sourceLanguage + '"><span class="badge">' + data.Translation.sourceLanguageCode + '</span></a> ' + data.Translation.sourceText+'<p>';
+		$('#' + output)[0].innerHTML += '<p><a href="#" data-toggle="tooltip" title="' + data.sourceLanguage + '"><span class="badge">' + data.Translation.sourceLanguageCode + '</span></a> ' + data.Translation.sourceText + '<p>';
 		$('#' + output)[0].innerHTML += '<p>&#8659;</p>';
-		$('#' + output)[0].innerHTML += '<p><a href="#" data-toggle="tooltip" title="' + data.destinationLanguage + '"><span class="badge">' + data.Translation.destinationLanguageCode + '</span></a> ' + data.Translation.translatedText+'<p>';
+		$('#' + output)[0].innerHTML += '<p><a href="#" data-toggle="tooltip" title="' + data.destinationLanguage + '"><span class="badge">' + data.Translation.destinationLanguageCode + '</span></a> ' + data.Translation.translatedText + '<p>';
 		$('#' + output)[0].innerHTML += '<div id="toneGraph" style="height:200px;"></div>';
 		$('[data-toggle="tooltip"]').tooltip();
 		plotToneGraph(data, 'toneGraph');
+		//loding wheel stopped
 	}
 
 	$.get(url, reqData, callback);
 }
 function getHistory(output, ttext, source, dest, output2, callback_tran) {
+	//loding wheel activated
+	if ($('#' + output2)[0] != undefined)
+		$('#' + output2)[0].innerHTML = '<img src="images/ring.gif">';
+	$('#' + output)[0].style.background = "url(images/ring.gif) no-repeat center center";
 	console.log('LOCAL history API now');
 	var url = '/api/v1/history';
 	var reqData = { 'num': 5 };
@@ -35,6 +41,8 @@ function getHistory(output, ttext, source, dest, output2, callback_tran) {
 		}
 		text += '</tbody></table>';
 		$('#' + output)[0].innerHTML = text;
+		$('#' + output)[0].style.background = '';
+		//loding wheel stopped
 		$('[data-toggle="tooltip"]').tooltip();
 
 	}
@@ -58,7 +66,7 @@ function plotToneGraph(translation, toneDiv) {
 				toneData[j]["column-1"] = tempTone.document_tone.tone_categories[i].tones[j].score;
 			}
 			break;
-			
+
 		}
 	}
 	var tempTone = translation.Translation.translatedTextTone;

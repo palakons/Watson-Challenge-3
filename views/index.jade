@@ -13,5 +13,5 @@ block content
         each lang in languages
           option(value="#{lang.language}") #{lang.name}
     .col-md-1
-      button.btn.btn-default(type="submit" onclick="$('#completed-transaction')[0].innerHTML = ''; getHistory('history-content',$('#sourceText')[0].value,'en',$('#destLang')[0].value,'completed-transaction',useAPI); $('#sourceText')[0].value = '';") Translate & Analyze
+      button.btn.btn-default(type="submit" onclick="if($('#sourceText')[0].value != '') {$('#completed-transaction')[0].innerHTML = ''; getHistory('history-content',$('#sourceText')[0].value,'en',$('#destLang')[0].value,'completed-transaction',useAPI); $('#sourceText')[0].value = '';}else{alert('Source String cannot be empty.');}") Translate & Analyze
     .col-md-1
