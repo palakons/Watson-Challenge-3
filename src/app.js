@@ -40,12 +40,9 @@ app.use(stylus.middleware(
 	}
 ))
 app.use(express.static(__dirname + '/../public'));
-// respond with "hello world" when a GET request is made to the homepage
 
 app.get('/', function (req, res) {
 	var languages = JSON.parse(JSON.stringify(availableLanguages));
-	//console.log(JSON.stringify(languages.languages));
-	//console.log(JSON.stringify(langList));
 	languages.languages = [];
 	//-----
 	translator.getModels({ 'source': 'en' }, function (err, models) {
@@ -55,7 +52,6 @@ app.get('/', function (req, res) {
 			console.log('models');
 			var langSet = new Set();
 			for (var i in models.models) {
-				//console.log(JSON.stringify(langList[models.models[i].target]));
 				langSet.add(models.models[i].target);
 			}
 
@@ -111,8 +107,7 @@ var createDatabase = function (callback) {
 
 //create a document
 var createDocument = function (data, callback) {
-	console.log("Creating document 'data'");
-	//we are specifying the id of the document so we can update and delete it later
+	console.log("Creating document");
 	db.insert(data, function (err, data) {
 		console.log("Error:", err);
 		console.log("Data:", data);
@@ -123,7 +118,7 @@ var createDocument = function (data, callback) {
 
 //read a document
 var readDocument = function (params, callback) {
-	console.log("Reading document 'mydoc'");
+	console.log("Reading document");
 	db.list({ include_docs: true }
 		, function (err, data) {
 			console.log("Error:", err);
@@ -143,13 +138,7 @@ var translator = new LanguageTranslatorV2({
 	// environment property
 	// username: '<username>',
 	// password: '<password>'
-	url: 'https://gateway.watsonplatform.net/language-translator/api'/*
-																	 * ,
-																	 * use_unauthenticated:
-																	 * process.env.use_unauthenticated
-																	 * ===
-																	 * 'true'
-																	 */
+	url: 'https://gateway.watsonplatform.net/language-translator/api'
 });
 
 var availableLanguages = null;
@@ -189,7 +178,6 @@ if (process.env.VCAP_SERVICES) {
 	console.log('VCAP_SERVICES: %s', process.env.VCAP_SERVICES);
 	// Also parse out Cloudant settings.
 	var cloudant = Cloudant(env['cloudantNoSQLDB'][0]['credentials']);
-	console.log(JSON.stringify(env['cloudantNoSQLDB'][0]['credentials']));
 	var dbname = 'history';
 	var db = null;
 
@@ -203,17 +191,16 @@ createDatabase(function (err, data) {
 	}
 });
 
-
-
 /*
- * 3. Create a GET API request with 2 endpoints - /api/translate - /api/history
+ * 3. Create a GET API request with 2 endpoints - /api/v1/translate - /api/v1/history
  */
 
-app.get('/api/translate', function (req, res, next) {
-	console.log('/v2/translate');
+app.get('/api/v1/translate', function (req, res, next) {
+	console.log('/v1/translate');
 
 	var textSource = { 'source': req.query.sourceLanguageCode, 'target': req.query.destinationLanguageCode, 'text': req.query.sourceText };
 
+	console.log('input obj');
 	console.log(JSON.stringify(req.query));
 	// check if inputs are defined
 	if (req.query.sourceLanguageCode == undefined || req.query.destinationLanguageCode == undefined || req.query.sourceText == undefined) {
@@ -227,19 +214,16 @@ app.get('/api/translate', function (req, res, next) {
 		// check if language code exists
 		var sourceLanguageCodeOK = false;
 		var targetLanguageCodeOK = false;
-		console.log('available Language');
-		console.log(JSON.stringify(availableLanguages.languages));
+		console.log('check if languageCodes valid');
 		for (var i in availableLanguages.languages) {
 			var ele = availableLanguages.languages[i];
-			//console.log(JSON.stringify(ele));
-
 			if (ele.language === textSource.source) {
 				sourceLanguageCodeOK = true;
-				console.log('matched'+textSource.source);
+				console.log('matched: '+textSource.source);
 			}
 			if (ele.language === textSource.target) {
 				targetLanguageCodeOK = true;
-				console.log('matched'+textSource.target);
+				console.log('matched: '+textSource.target);
 			}
 		}
 		if (!sourceLanguageCodeOK || !targetLanguageCodeOK)
@@ -250,8 +234,7 @@ app.get('/api/translate', function (req, res, next) {
 				if (err)
 					console.log(err)
 				else {
-					console.log('models');
-					//console.log(JSON.stringify(models));
+					console.log('check if language pair is OK');
 					var foundPair = false;
 					for (var i in models.models) {
 						if (models.models[i].target === textSource.target) {
@@ -267,7 +250,7 @@ app.get('/api/translate', function (req, res, next) {
 							if (err)
 								return next(err);
 							else {
-
+								console.log('traslation done');
 								var sourceTone = null;
 								var targetTone = null;
 								// call tone analyzer to source text
@@ -276,18 +259,7 @@ app.get('/api/translate', function (req, res, next) {
 										if (err)
 											console.log(err);
 										else {
-											// console.log(JSON.stringify(tone, null, 2));
-											console.log('tone');
-											//console.log(JSON.stringify(tone));
-											/*for (var i in tone.document_tone.tone_categories) {
-
-												if (tone.document_tone.tone_categories[i].category_id == 'emotion_tone') {
-													tone.document_tone.tone_categories[i].tones.sort(function (a, b) {
-														return b.score - a.score;
-													});
-													sourceTone += tone.document_tone.tone_categories[i].tones[0].tone_name + ' (' + tone.document_tone.tone_categories[i].tones[0].score + ')';
-												}
-											}*/
+											console.log('got originalTone');
 											sourceTone = tone;
 											// call tone analyzer to translated text
 											toneAnalyzer.tone({ text: models.translations[0].translation },
@@ -295,16 +267,7 @@ app.get('/api/translate', function (req, res, next) {
 													if (err)
 														console.log(err);
 													else {
-														// console.log(JSON.stringify(tone, null,
-														// 2));
-														/*for (var i in tone.document_tone.tone_categories) {
-															if (tone.document_tone.tone_categories[i].category_id == 'emotion_tone') {
-																tone.document_tone.tone_categories[i].tones.sort(function (a, b) {
-																	return b.score - a.score;
-																});
-																targetTone += tone.document_tone.tone_categories[i].tones[0].tone_name + ' (' + tone.document_tone.tone_categories[i].tones[0].score + ')';
-															}
-														}*/
+											console.log('got translatedTone');
 														targetTone = tone;
 														// now we have all data
 														var translationOutput = extend({ 'time': Date.now(),'destinationLanguage':langList[textSource.target].name,'sourceLanguage': langList[textSource.source].name}, makeTranslation(textSource.text, textSource.source, textSource.target, sourceTone, models.translations[0].translation, targetTone));
@@ -314,8 +277,6 @@ app.get('/api/translate', function (req, res, next) {
 																res.json(err);
 															}
 														});
-														//return json
-														//console.log(JSON.stringify(translationOutput));
 														res.status(200).json(translationOutput);
 													}
 												});
@@ -330,18 +291,16 @@ app.get('/api/translate', function (req, res, next) {
 });
 
 
-app.get('/api/history', function (req, res, next) {
-	console.log('/v2/history');
+app.get('/api/v1/history', function (req, res, next) {
+	console.log('/v1/history');
 	var limit = req.query.num ? req.query.num : 5;
 	limit = Math.min(100, limit);
-	//res.send('history<br/><pre>' + '</pre>');
 
 	readDocument({ 'limit': limit }, function (err, data) {
 		if (err) {
 			res.json(err);
 		} else {
 			console.log('/rad data ok');
-			//console.log(JSON.stringify(data));
 			//process data
 			var translations = new Array();
 			data.rows.sort(function (a, b) {
@@ -357,41 +316,6 @@ app.get('/api/history', function (req, res, next) {
 	});
 
 });
-
-/*app.get('/api/deletedb', function (req, res, next) {
-    console.log('/deletedb');
-
-    // deleting the database document
-    var deleteDatabase = function (callback) {
-        console.log("Deleting database '" + dbname + "'");
-        cloudant.db.destroy(dbname, function (err, data) {
-            console.log("Error:", err);
-            console.log("Data:", data);
-            callback(err, data);
-            res.send('deleteDB<br/><pre>' + '</pre>');
-        });
-
-        deleteDatabase(function (err, data) {
-        	console.log(err);
-            console.log(data);
-        });
-    };
-}); */
-
-/*
- * 4. Implement the API defined in the attached Swagger doc. You may use
- * editor.swagger.io generators if you wish. You also do not have to follow the
- * API to the letter. As long as the inputs and outputs work as required, you
- * are welcome to make additions or corrections as you see fit.
- */
-
-/*
- * 5. Create a very simple UI that uses the above Api. A sample UI screenshot
- * are provided below. UI is provided for demonstration only, and not
- * necessarily to implement as is. Feel free to experiment with the UI. You will
- * not be critiqued on the design of your UI, only the functionality surfaced in
- * it.
- */
 
 // ========================================================================
 

@@ -2,16 +2,14 @@
 getHistory('history-content', $('#sourceText')[0].value, 'en', $('#destLang')[0].value, 'completed-transaction', function () { });
 
 function useAPI(text, source, dest, output) {
-	console.log('LOCAL use API now');
-	var url = '/api/translate';
+	console.log('LOCAL translation API now');
+	var url = '/api/v1/translate';
 	var reqData = {
 		'sourceText': text,
 		'destinationLanguageCode': dest,
 		'sourceLanguageCode': source
 	};
-	console.log(reqData);
 	function callback(data, textStatus, jqXHR) {
-		console.log(data);
 		$('#' + output)[0].innerHTML = '';
 		$('#' + output)[0].innerHTML += '<p><a href="#" data-toggle="tooltip" title="' + data.sourceLanguage + '"><span class="badge">' + data.Translation.sourceLanguageCode + '</span></a> ' + data.Translation.sourceText+'<p>';
 		$('#' + output)[0].innerHTML += '<p>&#8659;</p>';
@@ -25,14 +23,10 @@ function useAPI(text, source, dest, output) {
 }
 function getHistory(output, ttext, source, dest, output2, callback_tran) {
 	console.log('LOCAL history API now');
-	var url = '/api/history';
+	var url = '/api/v1/history';
 	var reqData = { 'num': 5 };
-	console.log(ttext, source, dest, output2);
 	function callback(data, textStatus, jqXHR) {
-
-		console.log(ttext, source, dest, output2);
 		callback_tran(ttext, source, dest, output2);
-		console.log(data, textStatus, jqXHR);
 		var text = '<table class = "table"><thead><tr><th>No.</th><th>Original</th><th>Translated</th></tr></thead><tbody>';
 
 		for (var i in data) {
@@ -49,12 +43,6 @@ function getHistory(output, ttext, source, dest, output2, callback_tran) {
 function plotToneGraph(translation, toneDiv) {
 	console.log('translation data');
 	console.log(translation);
-	/*translation.sourceTextTone
-	translation.translatedTextTone
-		.document_tone.tone_categories[].category_id === 'social_tone'
-			.document_tone.tone_categories[].tones[].tone_id
-			.document_tone.tone_categories[].tones[].tone_name
-			.document_tone.tone_categories[].tones[].score*/
 	var toneData = [];
 	var tempTone = translation.Translation.sourceTextTone;
 	for (var i in tempTone.document_tone.tone_categories) {
@@ -75,7 +63,6 @@ function plotToneGraph(translation, toneDiv) {
 	}
 	var tempTone = translation.Translation.translatedTextTone;
 	for (var i in tempTone.document_tone.tone_categories) {
-		console.log(tempTone.document_tone.tone_categories[i].category_id);
 		if (tempTone.document_tone.tone_categories[i].category_id === 'social_tone') {
 			tempTone.document_tone.tone_categories[i].tones.sort(function (a, b) {
 				if (a.tone_name < b.tone_name) return -1;
@@ -88,7 +75,6 @@ function plotToneGraph(translation, toneDiv) {
 			break;
 		}
 	}
-	console.log(toneData);
 	AmCharts.makeChart(toneDiv,
 		{
 			"type": "serial",
@@ -133,23 +119,6 @@ function plotToneGraph(translation, toneDiv) {
 			},
 			"titles": [],
 			"dataProvider": toneData
-			/*[
-				{
-					"category": "mood1",
-					"column-1": 8,
-					"column-2": 5
-				},
-				{
-					"category": "category 2",
-					"column-1": 6,
-					"column-2": 7
-				},
-				{
-					"category": "category 3",
-					"column-1": 2,
-					"column-2": 3
-				}
-			]*/
 		}
 	);
 }

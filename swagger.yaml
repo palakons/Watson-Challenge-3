@@ -5,7 +5,7 @@ info:
     This is the REST API for IBM Cognitive Translate Challenge.
   version: "1.0.0"
 # the domain of the service
-host: bluemix.net
+host: tc-nizzz-02translate.mybluemix.net
 # array of all schemes that your API supports
 schemes:
   - https
